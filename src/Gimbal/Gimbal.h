@@ -32,6 +32,9 @@ class Gimbal : public FactGroup
     Q_PROPERTY(bool     retracted               READ retracted                  NOTIFY retractedChanged)
     Q_PROPERTY(bool     gimbalHaveControl       READ gimbalHaveControl          NOTIFY gimbalHaveControlChanged)
     Q_PROPERTY(bool     gimbalOthersHaveControl READ gimbalOthersHaveControl    NOTIFY gimbalOthersHaveControlChanged)
+    Q_PROPERTY(int      latImage                READ latImage                   NOTIFY imageCoordinatesChanged)
+    Q_PROPERTY(int      lonImage                READ lonImage                   NOTIFY imageCoordinatesChanged)
+    Q_PROPERTY(int      altImage                READ altImage                   NOTIFY imageCoordinatesChanged)
 
     friend class GimbalController;
 
@@ -54,6 +57,9 @@ public:
     bool retracted() const { return _retracted; }
     bool gimbalHaveControl() const { return _haveControl; }
     bool gimbalOthersHaveControl() const { return _othersHaveControl; }
+    int latImage() const { return _latImage; }
+    int lonImage() const { return _lonImage; }
+    int altImage() const { return _altImage; }
 
     void setAbsoluteRoll(float absRoll) { absoluteRoll()->setRawValue(absRoll); }
     void setAbsolutePitch(float absPitch) { absolutePitch()->setRawValue(absPitch); }
@@ -68,6 +74,7 @@ public:
     void setRetracted(bool retracted) { if (retracted != _retracted) { _retracted = retracted; emit retractedChanged(); } }
     void setGimbalHaveControl(bool set) { if (set != _haveControl) { _haveControl = set; emit gimbalHaveControlChanged(); } }
     void setGimbalOthersHaveControl(bool set) { if (set != _othersHaveControl) { _othersHaveControl = set; emit gimbalOthersHaveControlChanged(); } }
+    void setImageCoordinates(int latImage, int lonImage, int altImage) { _latImage = latImage; _lonImage = lonImage; _altImage = altImage; emit imageCoordinatesChanged(); }
 
 signals:
     void pitchRateChanged();
@@ -76,6 +83,7 @@ signals:
     void retractedChanged();
     void gimbalHaveControlChanged();
     void gimbalOthersHaveControlChanged();
+    void imageCoordinatesChanged();
 
 private:
     void _initFacts();
@@ -102,4 +110,7 @@ private:
     bool _retracted = false;
     bool _haveControl = false;
     bool _othersHaveControl = false;
+    int _latImage = 0;
+    int _lonImage = 0;
+    int _altImage = 0;
 };

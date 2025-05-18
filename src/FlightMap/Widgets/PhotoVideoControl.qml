@@ -57,10 +57,30 @@ Rectangle {
             spacing:            _margins
             visible:            _camera.hasZoom
 
-            QGCLabel {
+            // QGCLabel {
+            //     Layout.alignment:   Qt.AlignHCenter
+            //     text:               qsTr("Zoom")
+            //     font.pointSize:     ScreenTools.smallFontPointSize
+            // }
+
+            QGCButton {
                 Layout.alignment:   Qt.AlignHCenter
-                text:               qsTr("Zoom")
-                font.pointSize:     ScreenTools.smallFontPointSize
+                onClicked:          {
+                    // console.log("zoomLevel", _camera.zoomLevel +1)
+                    // _camera.stepZoom(parseInt(_camera.zoomLevel + 1));
+                    _camera.zoomLevel = parseInt(_camera.zoomLevel + 1);
+                }
+                onPressAndHold: {
+                    // _camera.stepZoom(100);
+                    _camera.zoomLevel = 100;
+                    // console.log("type is ", typeof _camera)
+                }
+
+                QGCColoredImage {
+                    source:         "/qmlimages/ZoomPlus.svg"
+                    color:          qgcPal.buttonText
+                    anchors.fill:   parent
+                }
             }
 
             QGCSlider {
@@ -72,9 +92,29 @@ Rectangle {
                 value:              _camera.zoomLevel
                 live:               true
                 onValueChanged:     _camera.zoomLevel = value
+                displayValue:       true
+            }
+
+            QGCButton {
+                Layout.alignment:   Qt.AlignHCenter
+                onClicked:          {
+                    console.log("zoomLevel", _camera.zoomLevel -1)
+                    // _camera.stepZoom(/*parseInt(_camera.zoomLevel - 1)*/);
+                    _camera.zoomLevel = parseInt(_camera.zoomLevel - 1);
+                }
+                onPressAndHold: {
+                    // _camera.stepZoom(0);
+                    _camera.zoomLevel = 0;
+                }
+
+                QGCColoredImage {
+                    source:         "/qmlimages/ZoomMinus.svg"
+                    color:          qgcPal.buttonText
+                    anchors.fill:   parent
+                }
             }
         }
-        
+
         ColumnLayout {
             spacing: _margins * 2
 

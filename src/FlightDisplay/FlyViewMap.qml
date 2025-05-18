@@ -306,6 +306,41 @@ FlightMap {
             z:              QGroundControl.zOrderVehicles
         }
     }
+    // Add image coordinates
+    MapItemView {
+        model: _activeVehicle.gimbalController.activeGimbal
+        delegate: MapQuickItem {
+            id: imageCoordinates
+            visible: true
+            coordinate: QtPositioning.coordinate(_activeVehicle.gimbalController.activeGimbal.latImage / 10e7, _activeVehicle.gimbalController.activeGimbal.lonImage / 10e7)
+            anchorPoint.x: imageCoordinatesImage.width / 2
+            anchorPoint.y: imageCoordinatesImage.height / 2
+            z: QGroundControl.zOrderVehicles
+            sourceItem: Column {
+                spacing: 2
+                Image {
+                    id: imageCoordinatesImage
+                    source: "qrc:/gimbal/camera-plus.svg"
+                    width: 50
+                    height: 50
+                    anchors.horizontalCenter: parent.horizontalCenter
+                }
+                Text {
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    text: _activeVehicle.gimbalController.activeGimbal.latImage / 10e7 + ", " + _activeVehicle.gimbalController.activeGimbal.lonImage / 10e7
+                    font.pixelSize: 14
+                    color: "red"
+                }
+            }
+        }
+
+        Connections {
+            target: _activeVehicle.gimbalController.activeGimbal
+            function imageCoordinatesChanged() {
+                imageCoordinates.visible = true;
+            }
+        }
+    }
 
     // Add the items associated with each vehicles flight plan to the map
     Repeater {

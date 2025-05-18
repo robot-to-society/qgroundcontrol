@@ -71,6 +71,15 @@ void GimbalController::_mavlinkMessageReceived(const mavlink_message_t &message)
     case MAVLINK_MSG_ID_GIMBAL_DEVICE_ATTITUDE_STATUS:
         _handleGimbalDeviceAttitudeStatus(message);
         break;
+    case MAVLINK_MSG_ID_CAMERA_INFORMATION:
+        _handleCameraInformation(message);
+        break;
+    case MAVLINK_MSG_ID_CAMERA_FOV_STATUS:
+        _handleCameraFovStatus(message);
+        break;
+    case MAVLINK_MSG_ID_CAMERA_SETTINGS:
+        _handleCameraSettings(message);
+        break;
     default:
         break;
     }
@@ -266,6 +275,43 @@ void GimbalController::_handleGimbalDeviceAttitudeStatus(const mavlink_message_t
     _checkComplete(*gimbal, pairId);
 }
 
+void GimbalController::_handleCameraInformation(const mavlink_message_t &message)
+{
+    mavlink_camera_information_t camera_information{};
+    mavlink_msg_camera_information_decode(&message, &camera_information);
+    GimbalPairId pairId{};
+
+    _receivedCameraInformation = true;
+
+    // Stop camera information message
+    // _vehicle->sendMavCommand(message.compid,
+    //                          MAV_CMD_SET_MESSAGE_INTERVAL,
+    //                          false /* no error */,
+    //                          MAVLINK_MSG_ID_CAMERA_INFORMATION,
+    //                          -1 /* disable this message */);
+}
+
+void GimbalController::_handleCameraFovStatus(const mavlink_message_t &message)
+{
+    mavlink_camera_fov_status_t camera_fov_status{};
+    mavlink_msg_camera_fov_status_decode(&message, &camera_fov_status);
+
+    qCDebug(GimbalControllerLog) << "cameraFOV(" << camera_fov_status.lat_image << ", " << camera_fov_status.lon_image << ", " << camera_fov_status.alt_image << ")";
+    if (_activeGimbal != nullptr) {
+        _activeGimbal->setImageCoordinates(camera_fov_status.lat_image, camera_fov_status.lon_image, camera_fov_status.alt_image);
+    }
+
+    _receivedCameraFovStatus = true;
+}
+
+void GimbalController::_handleCameraSettings(const mavlink_message_t &message)
+{
+    mavlink_camera_settings_t camera_settings{};
+    mavlink_msg_camera_settings_decode(&message, &camera_settings);
+
+    qCDebug(GimbalControllerLog) << "cameraSettings(" << camera_settings.zoomLevel << ", " << camera_settings.focusLevel << ", " << camera_settings.mode_id << ")";
+}
+
 void GimbalController::_requestGimbalInformation(uint8_t compid)
 {
     qCDebug(GimbalControllerLog) << "_requestGimbalInformation(" << compid << ")";
@@ -278,10 +324,65 @@ void GimbalController::_requestGimbalInformation(uint8_t compid)
     }
 }
 
+void GimbalController::_checkCameraComplete(GimbalPairId pairId)
+{
+    if (_isCameraComplete || _activeGimbal == nullptr) {
+        return;
+    }
+
+    static qint64 lastRequestStatusMessage = 0;
+    qint64 now = QDateTime::currentMSecsSinceEpoch();
+    if (!_receivedCameraInformation && _requestCameraInformation > 0 &&
+        (now - lastRequestStatusMessage) > 5000) {
+         lastRequestStatusMessage = now;
+        // We request camera information for check it has zoom flag
+         uint8_t gimbalDeviceCompid = pairId.deviceId;
+         // If the device ID is 1-6, we need to request the message from the manager itself.
+         if (gimbalDeviceCompid <= 6) {
+             gimbalDeviceCompid = pairId.managerCompid;
+         }
+         _vehicle->sendMavCommand(gimbalDeviceCompid,
+                                  MAV_CMD_SET_MESSAGE_INTERVAL,
+                                  false /* no error */,
+                                  MAVLINK_MSG_ID_CAMERA_INFORMATION,
+                                  (_requestCameraInformation < 2) ? 0 : 5000000);
+         _vehicle->sendMavCommand(gimbalDeviceCompid,
+                                  MAV_CMD_SET_MESSAGE_INTERVAL,
+                                  false /* no error */,
+                                  MAVLINK_MSG_ID_CAMERA_SETTINGS,
+                                  (_requestCameraInformation < 2) ? 0 : 5000000);
+        _requestCameraInformation--;
+    }
+
+    if (!_receivedCameraFovStatus && _requestCameraFovStatus > 0 &&
+        _receivedCameraInformation && (now - lastRequestStatusMessage) > 5000) {
+         lastRequestStatusMessage = now;
+        // Now we can request camera fov status
+         uint8_t gimbalDeviceCompid = pairId.deviceId;
+         // If the device ID is 1-6, we need to request the message from the manager itself.
+         if (gimbalDeviceCompid <= 6) {
+             gimbalDeviceCompid = pairId.managerCompid;
+         }
+        _vehicle->sendMavCommand(gimbalDeviceCompid,
+                                 MAV_CMD_SET_MESSAGE_INTERVAL,
+                                 false /* no error */,
+                                 MAVLINK_MSG_ID_CAMERA_FOV_STATUS,
+                                 (_requestCameraFovStatus < 2) ? 0 : 2000000);
+        _requestCameraFovStatus--;
+    }
+
+    if (!_receivedCameraInformation || !_receivedCameraFovStatus) {
+        return;
+    }
+
+    _isCameraComplete = true;
+}
+
 void GimbalController::_checkComplete(Gimbal &gimbal, GimbalPairId pairId)
 {
+    // Check camera
+    _checkCameraComplete(pairId);
     if (gimbal._isComplete) {
-        // Already complete, nothing to do.
         return;
     }
 
@@ -289,9 +390,9 @@ void GimbalController::_checkComplete(Gimbal &gimbal, GimbalPairId pairId)
         _requestGimbalInformation(pairId.managerCompid);
         --gimbal._requestInformationRetries;
     }
-    // Limit to 1 second between set message interface requests
     static qint64 lastRequestStatusMessage = 0;
     qint64 now = QDateTime::currentMSecsSinceEpoch();
+    // Limit to 1 second between set message interface requests
     if (!gimbal._receivedStatus && (gimbal._requestStatusRetries > 0) && (now - lastRequestStatusMessage > 1000)) {
         lastRequestStatusMessage = now;
         _vehicle->sendMavCommand(pairId.managerCompid,

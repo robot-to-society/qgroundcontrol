@@ -92,12 +92,23 @@ private:
         uint8_t deviceId = 0;
     };
 
+
+    unsigned _requestCameraInformation = 10;
+    unsigned _requestCameraFovStatus = 10;
+    bool _receivedCameraInformation = false;
+    bool _receivedCameraFovStatus = false;
+    bool _isCameraComplete = false;
+
     void _requestGimbalInformation(uint8_t compid);
     void _handleHeartbeat(const mavlink_message_t &message);
     void _handleGimbalManagerInformation(const mavlink_message_t &message);
     void _handleGimbalManagerStatus(const mavlink_message_t &message);
     void _handleGimbalDeviceAttitudeStatus(const mavlink_message_t &message);
+    void _handleCameraInformation(const mavlink_message_t &message);
+    void _handleCameraFovStatus(const mavlink_message_t &message);
+    void _handleCameraSettings(const mavlink_message_t &message);
     void _checkComplete(Gimbal &gimbal, GimbalPairId pairId);
+    void _checkCameraComplete(GimbalPairId pairId);
     bool _tryGetGimbalControl();
     bool _yawInVehicleFrame(uint32_t flags);
 

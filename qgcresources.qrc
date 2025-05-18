@@ -109,5 +109,6 @@
     </qresource>
     <qresource prefix="/gimbal">
         <file alias="payload.svg">resources/gimbal/payload.svg</file>
+        <file alias="camera-plus.svg">resources/gimbal/camera-plus.svg</file>
     </qresource>
 </RCC>
